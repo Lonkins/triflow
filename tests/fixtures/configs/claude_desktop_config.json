@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "files": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/example/Documents"],
+      "env": {"FS_ROOT": "/Users/example/Documents"}
+    },
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.example/sse-not-really",
+      "headers": {"Authorization": "Bearer FIXTURE-PLACEHOLDER-NOT-A-SECRET"}
+    }
+  }
+}

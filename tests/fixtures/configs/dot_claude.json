@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "web-search": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    }
+  },
+  "projects": {
+    "/Users/example/work/app": {
+      "mcpServers": {
+        "mailer": {
+          "command": "npx",
+          "args": ["-y", "mcp-send-email"],
+          "env": {"SMTP_HOST": "smtp.example.com"}
+        }
+      },
+      "otherSetting": true
+    },
+    "/Users/example/work/broken": "not-an-object"
+  }
+}
