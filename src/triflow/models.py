@@ -149,6 +149,19 @@ class FindingType(StrEnum):
     LETHAL_TRIFECTA = "lethal_trifecta"
     TOOL_SHADOWING = "tool_shadowing"
     PRIVILEGE_ESCALATION = "privilege_escalation"
+    SKILL_UNBOUNDED_SHELL = "skill_unbounded_shell"
+    SKILL_NETWORK_AND_SECRETS = "skill_network_and_secrets"
+    SKILL_MISSING_SCOPING = "skill_missing_scoping"
+    SKILL_OVERBROAD_TOOLS = "skill_overbroad_tools"
+
+
+class FileLocation(BaseModel):
+    """Where a finding lives on disk (for SARIF physical locations)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    path: str
+    line: int | None = None
 
 
 class Participant(BaseModel):
@@ -183,6 +196,7 @@ class Finding(BaseModel):
     remediation: str
     participants: tuple[Participant, ...] = ()
     cross_server: bool = True
+    location: FileLocation | None = None
 
     @property
     def server_slugs(self) -> tuple[str, ...]:
