@@ -1,0 +1,56 @@
+site_name: triflow
+site_description: Cross-server MCP toxic-flow (lethal-trifecta) analyzer and SKILL.md linter
+site_url: https://lonkins.github.io/triflow/
+repo_url: https://github.com/Lonkins/triflow
+repo_name: Lonkins/triflow
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: red
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - Usage: usage.md
+      - GitHub Action: github-action.md
+  - Reference:
+      - Capability taxonomy: taxonomy.md
+      - Rule catalog: rules.md
+  - Understanding:
+      - Threat model: threat-model.md
+      - How this complements single-server scanners: complements.md
+  - Design decisions:
+      - ADR-0001 Metadata-only introspection: adr/0001-metadata-only-introspection.md
+      - ADR-0002 Subprocess sandboxing: adr/0002-subprocess-sandboxing.md
+      - ADR-0003 Local-LLM opt-in: adr/0003-local-llm-opt-in.md
