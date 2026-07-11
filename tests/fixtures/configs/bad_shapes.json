@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "no-transport": {"env": {"X": "1"}},
+    "not-an-object": 42,
+    "bad-args": {"command": "npx", "args": "oops"}
+  }
+}
