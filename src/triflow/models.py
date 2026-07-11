@@ -43,6 +43,28 @@ class ServerConfig(BaseModel):
         return f"{self.client}:{self.name}"
 
 
+class Capability(StrEnum):
+    """The capability taxonomy — documented in docs/taxonomy.md."""
+
+    PRIVATE_DATA_SOURCE = "private_data_source"
+    UNTRUSTED_CONTENT_INGRESS = "untrusted_content_ingress"
+    EXFILTRATION_CHANNEL = "exfiltration_channel"
+    STATE_CHANGING = "state_changing"
+    CODE_EXECUTION = "code_execution"
+
+
+class Evidence(BaseModel):
+    """Why a capability was assigned: which rule matched what."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rule_id: str
+    capability: Capability
+    matched_on: str  # tool_name | tool_description | schema_property | server_identity
+    pattern: str
+    excerpt: str = ""
+
+
 class ToolInfo(BaseModel):
     """Metadata for one tool as declared by its server. Never the result of
     calling it — triflow does not invoke tools (ADR-0001)."""
@@ -66,3 +88,41 @@ class IntrospectedServer(BaseModel):
     @property
     def ok(self) -> bool:
         return self.error is None
+
+
+class ClassifiedTool(BaseModel):
+    """A tool plus the capabilities the classifier assigned to it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    server_slug: str
+    tool: ToolInfo
+    capabilities: frozenset[Capability] = frozenset()
+    evidence: tuple[Evidence, ...] = ()
+
+
+class ClassifiedServer(BaseModel):
+    """A server with per-tool and server-level capability assignments.
+
+    ``server_capabilities`` come from rules matching the server's own identity
+    (name/command/url) — the offline fallback when tool metadata is missing.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    config: ServerConfig
+    tools: tuple[ClassifiedTool, ...] = ()
+    server_capabilities: frozenset[Capability] = frozenset()
+    server_evidence: tuple[Evidence, ...] = ()
+    introspection_error: str | None = None
+
+    @property
+    def slug(self) -> str:
+        return self.config.slug
+
+    @property
+    def all_capabilities(self) -> frozenset[Capability]:
+        merged: frozenset[Capability] = self.server_capabilities
+        for tool in self.tools:
+            merged = merged | tool.capabilities
+        return merged
