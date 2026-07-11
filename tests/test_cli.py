@@ -58,9 +58,14 @@ class TestScan:
         sarif = json.loads(out.read_text())
         assert sarif["version"] == "2.1.0"
 
-    def test_fail_on_none_never_fails(self, tmp_path: Path) -> None:
+    def test_no_fail_reports_but_exits_0(self, tmp_path: Path) -> None:
         config = write_config(tmp_path, TOXIC_CONFIG)
-        # Typer accepts the enum value "critical"; use a high threshold nothing exceeds
+        result = runner.invoke(app, ["scan", "-c", str(config), "--no-introspect", "--no-fail"])
+        assert result.exit_code == 0  # gate disabled...
+        assert "TRIFLOW-TRIFECTA" in result.output  # ...but the finding is still reported
+
+    def test_fail_on_medium_still_gates_on_critical(self, tmp_path: Path) -> None:
+        config = write_config(tmp_path, TOXIC_CONFIG)
         result = runner.invoke(
             app, ["scan", "-c", str(config), "--no-introspect", "--fail-on", "critical"]
         )

@@ -1,0 +1,34 @@
+name: action-selftest
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run triflow action against bundled examples
+        uses: ./
+        with:
+          config: examples/mcp.json
+          skills: examples/skills
+          fail-on: none # self-test asserts on the SARIF, doesn't gate here
+          results-dir: selftest-results
+
+      - name: Assert the trifecta and skill findings were reported
+        run: |
+          set -euo pipefail
+          fleet=selftest-results/triflow-fleet.sarif
+          skills=selftest-results/triflow-skills.sarif
+          test -f "$fleet" || { echo "missing $fleet"; exit 1; }
+          test -f "$skills" || { echo "missing $skills"; exit 1; }
+          grep -q "TRIFLOW-TRIFECTA" "$fleet" || { echo "trifecta not found"; exit 1; }
+          grep -q "TRIFLOW-SKILL" "$skills" || { echo "skill finding not found"; exit 1; }
+          echo "Self-test passed: trifecta + skill findings present."

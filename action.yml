@@ -1,0 +1,84 @@
+name: triflow
+description: Cross-server MCP toxic-flow (lethal-trifecta) analyzer and SKILL.md linter.
+branding:
+  icon: git-merge
+  color: red
+
+inputs:
+  config:
+    description: >-
+      Path to an MCP client config file (mcpServers shape) to scan. If empty,
+      triflow auto-discovers configs under the runner's home and the repo.
+    required: false
+    default: ""
+  skills:
+    description: Path to a SKILL.md file or a directory tree of skills to lint.
+    required: false
+    default: ""
+  introspect:
+    description: "Launch servers for metadata-only tool listing (true/false)."
+    required: false
+    default: "false"
+  fail-on:
+    description: "Fail the job if any finding is at/above this severity (critical|high|medium|low|none)."
+    required: false
+    default: "high"
+  version:
+    description: triflow version to install from PyPI. Empty installs from this action's checkout.
+    required: false
+    default: ""
+  results-dir:
+    description: Directory to write SARIF results into.
+    required: false
+    default: triflow-results
+
+outputs:
+  sarif-directory:
+    description: Directory containing the generated SARIF files.
+    value: ${{ inputs.results-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install triflow
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          python -m pip install "triflow==${{ inputs.version }}"
+        elif [ -f "${{ github.action_path }}/pyproject.toml" ]; then
+          python -m pip install "${{ github.action_path }}"
+        else
+          python -m pip install triflow
+        fi
+
+    - name: Run triflow
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "${{ inputs.results-dir }}"
+        status=0
+        fail_flag="--fail-on ${{ inputs.fail-on }}"
+        if [ "${{ inputs.fail-on }}" = "none" ]; then fail_flag="--no-fail"; fi
+
+        introspect_flag="--no-introspect"
+        if [ "${{ inputs.introspect }}" = "true" ]; then introspect_flag="--introspect"; fi
+
+        config_flag=""
+        if [ -n "${{ inputs.config }}" ]; then config_flag="-c ${{ inputs.config }}"; fi
+
+        # shellcheck disable=SC2086
+        triflow scan $config_flag $introspect_flag -f sarif \
+          -o "${{ inputs.results-dir }}/triflow-fleet.sarif" $fail_flag || status=$?
+
+        if [ -n "${{ inputs.skills }}" ]; then
+          # shellcheck disable=SC2086
+          triflow lint-skills "${{ inputs.skills }}" -f sarif \
+            -o "${{ inputs.results-dir }}/triflow-skills.sarif" $fail_flag || status=$?
+        fi
+
+        exit $status

@@ -1,0 +1,38 @@
+# Example: run triflow on every PR and publish results to code scanning.
+# Copy this into .github/workflows/ in your own repository.
+name: triflow
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write # required to upload SARIF to code scanning
+
+jobs:
+  triflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Analyze MCP fleet and skills
+        id: triflow
+        uses: Lonkins/triflow@v0.1.0
+        with:
+          config: .mcp.json # your MCP client config (omit to auto-discover)
+          skills: .claude/skills # a skill file or a directory tree
+          fail-on: high # fail the job on high+ findings
+        continue-on-error: true # still upload SARIF even when findings gate the job
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.triflow.outputs.sarif-directory }}
+
+      - name: Enforce gate
+        if: steps.triflow.outcome == 'failure'
+        run: |
+          echo "triflow found blocking issues — see the Security tab." >&2
+          exit 1
