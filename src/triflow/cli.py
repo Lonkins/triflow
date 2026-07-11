@@ -113,9 +113,12 @@ def scan(
         Path | None, typer.Option("--output", "-o", help="Write output to a file.")
     ] = None,
     fail_on: Annotated[
-        Severity | None,
+        Severity,
         typer.Option(help="Exit non-zero if any finding is at/above this severity."),
     ] = Severity.HIGH,
+    no_fail: Annotated[
+        bool, typer.Option("--no-fail", help="Always exit 0, even with findings.")
+    ] = False,
 ) -> None:
     """Scan the installed MCP fleet for cross-server toxic flows."""
     if config:
@@ -145,7 +148,7 @@ def scan(
         output,
         servers=report.servers,
     )
-    if fail_on is not None and _at_or_above(report.findings, fail_on):
+    if not no_fail and _at_or_above(report.findings, fail_on):
         raise typer.Exit(code=1)
 
 
@@ -159,14 +162,17 @@ def lint_skills_command(
         Path | None, typer.Option("--output", "-o", help="Write output to a file.")
     ] = None,
     fail_on: Annotated[
-        Severity | None,
+        Severity,
         typer.Option(help="Exit non-zero if any finding is at/above this severity."),
     ] = Severity.HIGH,
+    no_fail: Annotated[
+        bool, typer.Option("--no-fail", help="Always exit 0, even with findings.")
+    ] = False,
 ) -> None:
     """Lint SKILL.md files for dangerous declared capabilities."""
     findings, warnings = lint_skills(paths)
     _emit(findings, warnings, output_format, output)
-    if fail_on is not None and _at_or_above(findings, fail_on):
+    if not no_fail and _at_or_above(findings, fail_on):
         raise typer.Exit(code=1)
 
 

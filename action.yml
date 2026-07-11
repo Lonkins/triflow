@@ -63,7 +63,7 @@ runs:
         mkdir -p "${{ inputs.results-dir }}"
         status=0
         fail_flag="--fail-on ${{ inputs.fail-on }}"
-        if [ "${{ inputs.fail-on }}" = "none" ]; then fail_flag=""; fi
+        if [ "${{ inputs.fail-on }}" = "none" ]; then fail_flag="--no-fail"; fi
 
         introspect_flag="--no-introspect"
         if [ "${{ inputs.introspect }}" = "true" ]; then introspect_flag="--introspect"; fi
