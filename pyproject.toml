@@ -36,6 +36,11 @@ dependencies = [
   "typer>=0.12",
 ]
 
+[project.optional-dependencies]
+docs = [
+  "mkdocs-material>=9.5",
+]
+
 [project.urls]
 Homepage = "https://github.com/Lonkins/triflow"
 Documentation = "https://lonkins.github.io/triflow/"
