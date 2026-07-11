@@ -1,0 +1,285 @@
+# triflow capability rule catalog.
+#
+# Deterministic heuristics mapping tool/server metadata to the capability
+# taxonomy. All patterns are Python regexes matched against LOWERCASED text.
+# Fields per rule:
+#   id                        stable identifier (documented in docs/rules.md)
+#   capability                one of the five taxonomy values
+#   rationale                 why this signal implies the capability
+#   name_patterns             matched against the tool name
+#   description_patterns      matched against the tool description
+#   schema_property_patterns  matched against input-schema property names
+#   server_patterns           matched against server name / command+args / url
+#                             (the offline fallback when tool metadata is absent)
+
+rules:
+  # ─── private_data_source ────────────────────────────────────────────────
+  - id: PRIV-FS-READ
+    capability: private_data_source
+    rationale: Local file reads expose documents, source code, and credentials on disk.
+    name_patterns:
+      - '(?:^|_)(read|get|cat|open|head|tail)_(text_)?files?(?:$|_)'
+      - '(?:^|_)list_(directory|dir|files|folders?)'
+      - '(?:^|_)(search|grep)_(files?|code|directory)'
+      - 'read_(media|multiple)_files?'
+    description_patterns:
+      - 'reads? (the )?(contents? of )?(a |the )?(local )?files?\b'
+      - 'access(es)? (the )?(local )?file ?system'
+
+  - id: PRIV-DB-READ
+    capability: private_data_source
+    rationale: Database queries return business/user records.
+    name_patterns:
+      - '(?:^|_)(query|select|read)_(db|database|table|rows?|records?)'
+      - '(?:^|_)(execute|run)_(sql|query)'
+      - 'sql_query'
+    description_patterns:
+      - '(run|execute)s? (a |an )?(sql|read-?only) quer(y|ies)'
+      - 'quer(y|ies) (the |a )?database'
+
+  - id: PRIV-EMAIL-READ
+    capability: private_data_source
+    rationale: Mailbox contents are private data.
+    name_patterns:
+      - '(?:^|_)(read|get|search|list|fetch)_(e?mails?|messages?|inbox|threads?|drafts?)'
+    description_patterns:
+      - "(read|search|list)e?s? (the )?(user'?s? )?(e-?mail|inbox|mailbox|messages)"
+
+  - id: PRIV-SECRETS
+    capability: private_data_source
+    rationale: Direct secret/credential access is the highest-value private data.
+    name_patterns:
+      - '(?:^|_)(get|read|list|export)_(secrets?|credentials?|tokens?|api_?keys?|passwords?)'
+      - 'keychain|1password|vault_(read|get)'
+    description_patterns:
+      - '(read|retrieve|access)e?s? (stored )?(secrets?|credentials?|api keys?|passwords?)'
+
+  - id: PRIV-PIM
+    capability: private_data_source
+    rationale: Calendar, contacts, and notes are personal data stores.
+    name_patterns:
+      - '(?:^|_)(get|list|search|read)_(calendar|events?|contacts?|notes?|reminders?)'
+    description_patterns:
+      - "(read|list|search)e?s? (the )?(user'?s? )?(calendar|contacts|notes)"
+
+  - id: PRIV-REPO-READ
+    capability: private_data_source
+    rationale: Repository contents can include private source and secrets in history.
+    name_patterns:
+      - '(?:^|_)(get|read)_file_contents?'
+      - '(?:^|_)(get|list)_(repositor(y|ies)|repos?|branches|commits?)'
+    description_patterns:
+      - 'reads? (files? )?(from )?(a |the )?(private )?(git )?repositor(y|ies)'
+
+  # ─── untrusted_content_ingress ──────────────────────────────────────────
+  - id: ING-WEB-FETCH
+    capability: untrusted_content_ingress
+    rationale: Arbitrary web content is the canonical prompt-injection carrier.
+    name_patterns:
+      - '(?:^|_)(fetch|get|download|load|read)_(url|urls|page|pages|web_?page|website|html)'
+      - '(?:^|_)fetch(?:$|_)'
+      - '(?:^|_)(browse|navigate|crawl|scrape)'
+      - 'http_(get|request)'
+    description_patterns:
+      - 'fetch(es)? (a |the |any )?(web ?page|url|website|content from the (web|internet))'
+      - '(browse|scrape|crawl)s? (the )?(web|internet|a website)'
+      - 'downloads? (content|files?|pages?) from'
+
+  - id: ING-WEB-SEARCH
+    capability: untrusted_content_ingress
+    rationale: Search results embed attacker-publishable text.
+    name_patterns:
+      - '(?:^|_)(web|internet|google|bing|brave|duckduckgo)_search'
+      - '(?:^|_)search_(web|internet|news|online)'
+    description_patterns:
+      - 'search(es)? the (web|internet)'
+
+  - id: ING-EMAIL-READ
+    capability: untrusted_content_ingress
+    rationale: Anyone can send the user email — inbound mail is attacker-writable content.
+    name_patterns:
+      - '(?:^|_)(read|get|search|list|fetch)_(e?mails?|inbox|threads?)'
+    description_patterns:
+      - "(read|search|list)e?s? (the )?(user'?s? )?(e-?mail|inbox|mailbox)"
+
+  - id: ING-PUBLIC-TRACKER
+    capability: untrusted_content_ingress
+    rationale: Public issues/comments/reviews are attacker-writable content.
+    name_patterns:
+      - '(?:^|_)(get|list|read)_(issues?|issue_comments?|pull_requests?|prs?|reviews?|discussions?)'
+    description_patterns:
+      - '(read|list|get)s? (public )?(issues?|comments?|discussions?|reviews?)'
+
+  - id: ING-URL-PARAM
+    capability: untrusted_content_ingress
+    rationale: A url/uri input on a retrieval-flavored tool implies it loads remote content.
+    name_patterns:
+      - '(?:^|_)(fetch|get|load|read|open|import|retrieve|request)(?:$|_)'
+    schema_property_patterns:
+      - '^(url|uri|link|href)$'
+
+  # ─── exfiltration_channel ───────────────────────────────────────────────
+  - id: EXF-EMAIL-SEND
+    capability: exfiltration_channel
+    rationale: Outbound email delivers data to arbitrary recipients.
+    name_patterns:
+      - '(?:^|_)send_(e?mail|message)s?'
+      - '(?:^|_)(compose|create)_draft'
+      - 'reply_(to_)?(e?mail|thread)'
+    description_patterns:
+      - 'sends? (an? )?(e-?mail|message)s? to'
+
+  - id: EXF-CHAT-POST
+    capability: exfiltration_channel
+    rationale: Chat/messaging posts reach external recipients and channels.
+    name_patterns:
+      - '(?:^|_)(post|send)_(slack_)?(message|dm|chat)s?'
+      - 'post_to_(channel|slack|discord|teams)'
+      - '(?:^|_)(tweet|toot)(?:$|_)'
+      - 'send_sms'
+    description_patterns:
+      - '(post|send)s? (a )?message(s)? (to|in) (a )?(channel|chat|user)'
+
+  - id: EXF-HTTP-OUT
+    capability: exfiltration_channel
+    rationale: Arbitrary outbound HTTP writes data to attacker-chosen endpoints.
+    name_patterns:
+      - 'http_(post|put|patch|request)'
+      - '(?:^|_)(call|invoke)_(api|webhook|endpoint)'
+      - '(?:^|_)(trigger_)?webhooks?(?:$|_)'
+    description_patterns:
+      - '(make|send)s? (arbitrary |an? )?http requests?'
+      - '(post|send)s? (data|payloads?) to (a |any )?(url|endpoint|webhook)'
+
+  - id: EXF-UPLOAD
+    capability: exfiltration_channel
+    rationale: Uploads/shares move local data to remote destinations.
+    name_patterns:
+      - '(?:^|_)(upload|share|publish|export)_(files?|documents?|data|folders?)?'
+    description_patterns:
+      - '(upload|share|publish)e?s? (files?|data|documents?) (to|with)'
+
+  - id: EXF-TRACKER-WRITE
+    capability: exfiltration_channel
+    rationale: Creating public issues/comments/gists publishes data to the world.
+    name_patterns:
+      - '(?:^|_)(create|add|post)_(issues?|comments?|gists?|discussions?)'
+      - 'create_(pull_request|pr|release)'
+    description_patterns:
+      - '(create|post)s? (an? )?(public )?(issue|comment|gist)'
+
+  # ─── state_changing ─────────────────────────────────────────────────────
+  - id: STATE-FS-WRITE
+    capability: state_changing
+    rationale: Writes/moves/deletes mutate the local system.
+    name_patterns:
+      - '(?:^|_)(write|create|edit|append|move|rename|copy)_(files?|directory|directories|folders?)'
+      - '(?:^|_)delete_(files?|directory|directories|folders?|items?)'
+    description_patterns:
+      - '(write|create|modif(y|ies)|delete)s? (a |the )?files?\b'
+
+  - id: STATE-MUTATE
+    capability: state_changing
+    rationale: Generic create/update/delete verbs mutate external systems.
+    name_patterns:
+      - '(?:^|_)(update|set|insert|upsert|patch)_'
+      - '(?:^|_)(delete|remove|drop|truncate|destroy)_'
+      - '(?:^|_)(deploy|restart|shutdown|kill|terminate)(?:$|_)'
+      - 'git_(commit|push|merge|reset)'
+    description_patterns:
+      - '(update|delete|modif(y|ies)|mutate)s? (records?|rows?|resources?|entries)'
+
+  # ─── code_execution ─────────────────────────────────────────────────────
+  - id: EXEC-SHELL
+    capability: code_execution
+    rationale: Shell access is unbounded — implies every other capability transitively.
+    name_patterns:
+      - '(?:^|_)(run|execute|exec)_(command|shell|bash|terminal|cmd|process)s?'
+      - '(?:^|_)(shell|bash|terminal)_(exec|run|command)?'
+      - '(?:^|_)shell(?:$|_)'
+    description_patterns:
+      - '(run|execute)s? (arbitrary |any )?(shell |terminal |system )?commands?'
+      - 'executes? .{0,20}in (a |the )?(shell|terminal)'
+
+  - id: EXEC-CODE
+    capability: code_execution
+    rationale: Interpreters evaluate attacker-influenceable code.
+    name_patterns:
+      - '(?:^|_)(run|execute|eval)_(code|python|javascript|js|script)s?'
+      - '(?:^|_)(eval|repl|interpreter)(?:$|_)'
+      - 'code_interpreter'
+    description_patterns:
+      - '(run|execute|evaluate)s? (arbitrary |user[- ]provided )?(python |javascript |)code'
+
+  # ─── server-level fallback rules (offline / config-only mode) ───────────
+  - id: SRV-FILESYSTEM
+    capability: private_data_source
+    rationale: Filesystem servers read local files by construction.
+    server_patterns:
+      - 'server-filesystem|mcp-filesystem|filesystem'
+
+  - id: SRV-FILESYSTEM-WRITE
+    capability: state_changing
+    rationale: Filesystem servers ship write/delete tools by default.
+    server_patterns:
+      - 'server-filesystem|mcp-filesystem|filesystem'
+
+  - id: SRV-FETCH
+    capability: untrusted_content_ingress
+    rationale: Fetch/browser servers ingest arbitrary web content.
+    server_patterns:
+      - 'server-fetch|mcp-fetch|(?:^|[-/_])fetch(?:$|[-/_ ])|puppeteer|playwright|browser(?:base)?|firecrawl'
+
+  - id: SRV-SEARCH
+    capability: untrusted_content_ingress
+    rationale: Web-search servers return attacker-publishable content.
+    server_patterns:
+      - 'brave-search|server-search|web-?search|serpapi|tavily|exa(?:$|[-/_ ])'
+
+  - id: SRV-EMAIL
+    capability: exfiltration_channel
+    rationale: Email servers can send mail out.
+    server_patterns:
+      - '(?:^|[-/_])(g?mail|smtp|sendgrid|mailgun|send-?email)(?:$|[-/_ ])|email'
+
+  - id: SRV-EMAIL-READ
+    capability: private_data_source
+    rationale: Email servers read the mailbox.
+    server_patterns:
+      - '(?:^|[-/_])(g?mail|imap)(?:$|[-/_ ])'
+
+  - id: SRV-CHAT
+    capability: exfiltration_channel
+    rationale: Chat servers post messages to external recipients.
+    server_patterns:
+      - 'slack|discord|telegram|whatsapp|teams-mcp|twilio'
+
+  - id: SRV-DB
+    capability: private_data_source
+    rationale: Database servers expose stored records.
+    server_patterns:
+      - 'postgres|mysql|sqlite|mongodb|redis|clickhouse|snowflake|bigquery'
+
+  - id: SRV-SHELL
+    capability: code_execution
+    rationale: Shell/terminal servers execute commands.
+    server_patterns:
+      - 'shell|terminal|desktop-commander|mcp-server-commands'
+
+  - id: SRV-GITHUB
+    capability: untrusted_content_ingress
+    rationale: VCS-hosting servers read public issues/comments (attacker-writable).
+    server_patterns:
+      - 'github|gitlab|bitbucket'
+
+  - id: SRV-GITHUB-PRIV
+    capability: private_data_source
+    rationale: VCS-hosting servers read private repository contents.
+    server_patterns:
+      - 'github|gitlab|bitbucket'
+
+  - id: SRV-GITHUB-EXF
+    capability: exfiltration_channel
+    rationale: VCS-hosting servers create public issues/comments/gists.
+    server_patterns:
+      - 'github|gitlab|bitbucket'
