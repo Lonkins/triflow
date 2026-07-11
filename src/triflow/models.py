@@ -126,3 +126,84 @@ class ClassifiedServer(BaseModel):
         for tool in self.tools:
             merged = merged | tool.capabilities
         return merged
+
+
+class Severity(StrEnum):
+    """Finding severity, ordered by :data:`SEVERITY_ORDER`."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+SEVERITY_ORDER: dict[Severity, int] = {
+    Severity.CRITICAL: 0,
+    Severity.HIGH: 1,
+    Severity.MEDIUM: 2,
+    Severity.LOW: 3,
+}
+
+
+class FindingType(StrEnum):
+    LETHAL_TRIFECTA = "lethal_trifecta"
+    TOOL_SHADOWING = "tool_shadowing"
+    PRIVILEGE_ESCALATION = "privilege_escalation"
+
+
+class Participant(BaseModel):
+    """One party to a finding: a specific tool, or a server's own identity when
+    the capability came from an identity rule (``tool_name is None``)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    server_slug: str
+    tool_name: str | None = None
+    capability: Capability | None = None
+    role: str = ""
+
+    @property
+    def ref(self) -> str:
+        base = (
+            self.server_slug if self.tool_name is None else f"{self.server_slug}/{self.tool_name}"
+        )
+        return f"{base} [{self.capability}]" if self.capability else base
+
+
+class Finding(BaseModel):
+    """A composed cross-server risk. ``rule_id`` is stable for SARIF/suppression."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rule_id: str
+    finding_type: FindingType
+    severity: Severity
+    title: str
+    detail: str
+    remediation: str
+    participants: tuple[Participant, ...] = ()
+    cross_server: bool = True
+
+    @property
+    def server_slugs(self) -> tuple[str, ...]:
+        seen: dict[str, None] = {}
+        for participant in self.participants:
+            seen.setdefault(participant.server_slug, None)
+        return tuple(seen)
+
+
+class ScanReport(BaseModel):
+    """Everything one scan produced: classified fleet, findings, warnings."""
+
+    model_config = ConfigDict(frozen=True)
+
+    servers: tuple[ClassifiedServer, ...] = ()
+    findings: tuple[Finding, ...] = ()
+    warnings: tuple[str, ...] = ()
+
+    @property
+    def server_count(self) -> int:
+        return len(self.servers)
+
+    def findings_by_severity(self, severity: Severity) -> tuple[Finding, ...]:
+        return tuple(f for f in self.findings if f.severity == severity)
