@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,3 +41,28 @@ class ServerConfig(BaseModel):
     def slug(self) -> str:
         """Stable human-readable identifier, e.g. ``claude-desktop:github``."""
         return f"{self.client}:{self.name}"
+
+
+class ToolInfo(BaseModel):
+    """Metadata for one tool as declared by its server. Never the result of
+    calling it — triflow does not invoke tools (ADR-0001)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    description: str = ""
+    input_schema: dict[str, Any] = Field(default_factory=dict)
+
+
+class IntrospectedServer(BaseModel):
+    """A configured server plus whatever metadata introspection produced."""
+
+    model_config = ConfigDict(frozen=True)
+
+    config: ServerConfig
+    tools: tuple[ToolInfo, ...] = ()
+    error: str | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.error is None
