@@ -1,0 +1,17 @@
+- id: triflow-skills
+  name: triflow SKILL.md linter
+  description: Lint agent SKILL.md files for dangerous declared capabilities.
+  entry: triflow lint-skills
+  language: python
+  files: (^|/)[Ss][Kk][Ii][Ll][Ll]\.md$
+  pass_filenames: true
+
+- id: triflow-scan
+  name: triflow MCP fleet scan
+  description: >-
+    Scan the project's MCP config for cross-server toxic flows (config-only).
+    Discovers .mcp.json in the repo root; triggers when any mcp config changes.
+  entry: triflow scan --no-introspect
+  language: python
+  files: (^|/)(\.mcp\.json|mcp\.json)$
+  pass_filenames: false
