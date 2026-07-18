@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Keep the SHA-pinned third-party actions fresh automatically.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
